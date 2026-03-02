@@ -41,7 +41,7 @@ def criar_frota():
 
     for i in range(num_faixas): # Loop das faixas
         y_atual = inicio_asfalto + (i * espaco_faixa)
-        for c in range(3): # 3 carros por faixa para ser movimentado
+        for c in range(2): # 2 carros por faixa para ser movimentado
             vel = random.randint(3, 6)
             direcao = 1 if i % 2 == 0 else -1
             novo_carro = Carro(y_atual, vel * direcao)
