@@ -1,26 +1,22 @@
 import pygame
-from Config import *
-
-from Config import ALTURA, LARGURA
-
+from Config import LARGURA, ALTURA
 
 class Jogador(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         try:
-            # Tenta carregar a imagem. Se não existir, cria um quadrado
             self.image = pygame.image.load("asset/personagem.png").convert_alpha()
             self.image = pygame.transform.scale(self.image, (40, 40))
         except:
             self.image = pygame.Surface((40, 40))
-            self.image.fill((0, 255, 0))  # Verde
+            self.image.fill((0, 255, 0))  # Verde caso a imagem falte
 
         self.rect = self.image.get_rect()
         self.resetar()
         self.velocidade = 5
 
     def mover(self):
-        # Captura as teclas pressionadas
+        # Verifica quais teclas estão a ser pressionadas para mover o boneco
         teclas = pygame.key.get_pressed()
         if teclas[pygame.K_UP] and self.rect.top > 0:
             self.rect.y -= self.velocidade
@@ -32,6 +28,6 @@ class Jogador(pygame.sprite.Sprite):
             self.rect.x += self.velocidade
 
     def resetar(self):
-        # Coloca o jogador na posição inicial (meio da base)
+        # Reposiciona o jogador na calçada inferior (início)
         self.rect.centerx = LARGURA // 2
-        self.rect.bottom = ALTURA - 10
+        self.rect.bottom = ALTURA - 20 # Ajustado para não começar em cima da calçada

@@ -5,64 +5,52 @@ from Config import *
 from Personagem import Jogador
 from Carro import Carro
 
-from Config import COR_FUNDO, FPS, LARGURA, ALTURA
-
 # 1. INICIALIZAÇÃO
 pygame.init()
+pygame.mixer.init()
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("Trabalho ADS - Atravessar a Rua")
 relogio = pygame.time.Clock()
-fonte_grande = pygame.font.SysFont("Arial", 60, bold=True)
-fonte_pequena = pygame.font.SysFont("Arial", 25)
 
-# 2. CARREGAR ASSETS (Imagens)
+fonte_titulo = pygame.font.SysFont("Arial", 60, bold=True)
+fonte_texto = pygame.font.SysFont("Arial", 30)
+
+# 2. CARREGAR ASSETS
 try:
-    # O .convert() ajuda o jogo a rodar mais rápido
     fundo_rua = pygame.image.load("asset/rua.png").convert()
     fundo_rua = pygame.transform.scale(fundo_rua, (LARGURA, ALTURA))
-except:
-    fundo_rua = None  # Plano B caso a imagem não exista
+    som_batida = pygame.mixer.Sound("asset/batida.mp3")
+    som_vitoria = pygame.mixer.Sound("asset/vitoria.mp3")
+    pygame.mixer.music.load("asset/transito.mp3")
+except Exception as e:
+    print(f"Erro nos assets: {e}")
+    fundo_rua = None
+    som_batida = som_vitoria = None
 
-# 3. CRIAÇÃO DOS GRUPOS DE SPRITES
-# GroupSingle é usado para o jogador (só existe um)
-grupo_jogador = pygame.sprite.GroupSingle()
+# 3. CONFIGURAÇÃO DE OBJETOS
 jogador = Jogador()
-grupo_jogador.add(jogador)
-
-# Group guarda todos os carros
+grupo_jogador = pygame.sprite.GroupSingle(jogador)
 grupo_carros = pygame.sprite.Group()
 
-
-
-def criar_carros():
+def criar_frota():
     grupo_carros.empty()
-
-    # 1. Definimos onde o asfalto começa e termina (em pixels)
-    inicio_asfalto = 160
+    inicio_asfalto = 150
     fim_asfalto = 480
+    num_faixas = 6
+    espaco_faixa = (fim_asfalto - inicio_asfalto) // num_faixas
 
-    # 2. Calculamos o espaço entre cada uma das 6 faixas
-    espaco_entre_faixas = (fim_asfalto - inicio_asfalto) // 6
+    for i in range(num_faixas): # Loop das faixas
+        y_atual = inicio_asfalto + (i * espaco_faixa)
+        for c in range(3): # 3 carros por faixa para ser movimentado
+            vel = random.randint(3, 6)
+            direcao = 1 if i % 2 == 0 else -1
+            novo_carro = Carro(y_atual, vel * direcao)
+            grupo_carros.add(novo_carro)
 
-    for i in range(6):
-        # O 'y' agora é calculado apenas dentro da zona de asfalto
-        pos_y = inicio_asfalto + (i * espaco_entre_faixas)
-
-        # Sorteia uma velocidade para cada carro
-        vel = random.randint(3, 8)
-
-        # Adiciona o carro na faixa correta
-        novo_carro = Carro(pos_y, vel)
-        grupo_carros.add(novo_carro)
-
-
-# 4. ESTADOS DO JOGO
-# Usamos strings para controlar em qual tela o jogador está
-estado_jogo = "MENU"
+estado = "MENU"
 
 # 5. LOOP PRINCIPAL
 while True:
-    # --- TRATAMENTO DE EVENTOS (Teclado e Mouse) ---
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             pygame.quit()
@@ -70,53 +58,49 @@ while True:
 
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_SPACE:
-                if estado_jogo == "MENU" or estado_jogo == "VITORIA":
-                    # Reinicia o jogo
+                if estado != "JOGANDO":
                     jogador.resetar()
-                    criar_carros()
-                    estado_jogo = "JOGANDO"
+                    criar_frota()
+                    estado = "JOGANDO"
+                    if fundo_rua:
+                        pygame.mixer.music.play(-1)
 
-    # --- LÓGICA DAS TELAS ---
-    if estado_jogo == "MENU":
-        tela.fill((0, 0, 0))  # Fundo preto
-        texto_titulo = fonte_grande.render("CROSS THE STREET", True, (255, 255, 255))
-        texto_instr = fonte_pequena.render("COMANDOS: Use as SETAS para mover", True, (255, 255, 0))
-        texto_start = fonte_pequena.render("Pressione ESPAÇO para Iniciar", True, (0, 255, 0))
+    # --- LÓGICA DE EXIBIÇÃO ---
+    if estado == "MENU":
+        tela.fill((30, 30, 30))
+        txt_t = fonte_titulo.render("ATRAVESSE A RUA", True, BRANCO)
+        txt_i = fonte_texto.render("SETAS: Mover | ESPAÇO: Iniciar", True, AMARELO)
+        tela.blit(txt_t, (LARGURA//2 - txt_t.get_width()//2, 200))
+        tela.blit(txt_i, (LARGURA//2 - txt_i.get_width()//2, 350))
 
-        tela.blit(texto_titulo, (LARGURA // 2 - 250, 150))
-        tela.blit(texto_instr, (LARGURA // 2 - 200, 300))
-        tela.blit(texto_start, (LARGURA // 2 - 150, 400))
+    elif estado == "VITORIA":
+        tela.fill((0, 0, 0))
+        txt_v = fonte_titulo.render("VOCÊ GANHOU!", True, (0, 255, 0))
+        txt_r = fonte_texto.render("Pressione ESPAÇO para reiniciar", True, BRANCO)
+        tela.blit(txt_v, (LARGURA//2 - txt_v.get_width()//2, 200))
+        tela.blit(txt_r, (LARGURA//2 - txt_r.get_width()//2, 350))
 
-    elif estado_jogo == "VITORIA":
-        tela.fill((20, 20, 20))
-        texto_win = fonte_grande.render("VOCÊ GANHOU!", True, (0, 255, 0))
-        texto_retry = fonte_pequena.render("Pressione ESPAÇO para jogar novamente", True, (255, 255, 255))
+    elif estado == "JOGANDO":
+        jogador.mover()
+        grupo_carros.update()
 
-        tela.blit(texto_win, (LARGURA // 2 - 200, 200))
-        tela.blit(texto_retry, (LARGURA // 2 - 200, 350))
-
-    elif estado_jogo == "JOGANDO":
-        # --- ATUALIZAÇÃO ---
-        jogador.mover()  # Move o boneco
-        grupo_carros.update()  # Move os carros
-
-        # Verificação de Colisão (Bateu no carro?)
         if pygame.sprite.spritecollide(jogador, grupo_carros, False):
-            jogador.resetar()  # Se bater, volta ao início (não perde o jogo)
+            if som_batida: som_batida.play()
+            jogador.resetar()
 
-        # Verificação de Vitória (Chegou no topo?)
-        if jogador.rect.top <= 0:
-            estado_jogo = "VITORIA"
+        # Condição de Vitória (Chegou na calçada de cima)
+        if jogador.rect.top <= 120:
+            if som_vitoria: som_vitoria.play()
+            pygame.mixer.music.stop()
+            estado = "VITORIA"
 
-        # --- DESENHO ---
         if fundo_rua:
             tela.blit(fundo_rua, (0, 0))
         else:
             tela.fill(COR_FUNDO)
 
-        grupo_carros.draw(tela)  # Desenha carros
-        grupo_jogador.draw(tela)  # Desenha o jogador por cima
+        grupo_carros.draw(tela)
+        grupo_jogador.draw(tela)
 
-    # Atualiza o ecrã e controla o FPS
     pygame.display.flip()
     relogio.tick(FPS)
